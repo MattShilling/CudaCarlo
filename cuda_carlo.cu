@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <random>
 
 // CUDA runtime
 #include <cuda_runtime.h>
@@ -59,10 +60,6 @@ __global__ void MonteCarlo(float *Xcs, float *Ycs, float *Rs, int *Hits) {
   float c = xc * xc + yc * yc - r * r;
   float d = b * b - 4. * a * c;
 
-  // cascading if-statements:
-  //	if you used "continue;" in project #1, change to this style because,
-  //	if there is no for-loop, then there is nowhere to continue to
-
   if (d >= 0.0) {
     // hits the circle:
     // get the first intersection:
@@ -113,25 +110,32 @@ int main(int argc, char *argv[]) {
 
   int dev = findCudaDevice(argc, (const char **)argv);
 
-  // allocate host memory:
-
+  // Allocate host memory.
   float *hXcs = new float[NUMTRIALS];
   float *hYcs = new float[NUMTRIALS];
   float *hRs = new float[NUMTRIALS];
   int *hHits = new int[NUMTRIALS];
 
-  // fill the random-value arrays:
+  // Create uniform random generator.
+  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  std::default_random_engine generator(seed);
+  // Most Monte Carlo sampling or integration techniques assume a “random number
+  // generator,” which generates uniform statistically independent values
+  // - MONTE CARLO TECHNIQUES, 2009 by G. Cowan
+  std::uniform_real_distribution<float> xcs_dist(XCMIN, XCMAX);
+  std::uniform_real_distribution<float> ycs_dist(YCMIN, YCMAX);
+  std::uniform_real_distribution<float> rs_dist(RMIN, RMAX);
+
+  // Fill the random-value arrays.
   for (int n = 0; n < NUMTRIALS; n++) {
-    hXcs[n] = Ranf(XCMIN, XCMAX);
-    hYcs[n] = Ranf(YCMIN, YCMAX);
-    hRs[n] = Ranf(RMIN, RMAX);
+    hXcs[n] = xcs_dist(generator);
+    hYcs[n] = ycs_dist(generator);
+    hRs[n] = rs_dist(generator);
   }
 
-  // allocate device memory:
-
+  // Allocate GPU memory.
   float *dXcs, *dYcs, *dRs;
   int *dHits;
-
   dim3 dimsXcs(NUMTRIALS, 1, 1);
   dim3 dimsYcs(NUMTRIALS, 1, 1);
   dim3 dimsRs(NUMTRIALS, 1, 1);
@@ -150,8 +154,7 @@ int main(int argc, char *argv[]) {
   status = cudaMalloc((void **)(&dHits), NUMTRIALS * sizeof(int));
   checkCudaErrors(status);
 
-  // copy host memory to the device:
-
+  // Copy host memory to the GPU.
   status =
       cudaMemcpy(dXcs, hXcs, NUMTRIALS * sizeof(float), cudaMemcpyHostToDevice);
   checkCudaErrors(status);
@@ -164,39 +167,32 @@ int main(int argc, char *argv[]) {
       cudaMemcpy(dRs, hRs, NUMTRIALS * sizeof(float), cudaMemcpyHostToDevice);
   checkCudaErrors(status);
 
-  // setup the execution parameters:
-
+  // Set up the execution parameters.
   dim3 threads(BLOCKSIZE, 1, 1);
   dim3 grid(NUMBLOCKS, 1, 1);
 
-  // create and start timer
-
+  // Create and start timer.
   cudaDeviceSynchronize();
 
-  // allocate CUDA events that we'll use for timing:
-
+  // Allocate CUDA events that we'll use for timing.
   cudaEvent_t start, stop;
   status = cudaEventCreate(&start);
   checkCudaErrors(status);
   status = cudaEventCreate(&stop);
   checkCudaErrors(status);
 
-  // record the start event:
-
+  // Record the start event.
   status = cudaEventRecord(start, NULL);
   checkCudaErrors(status);
 
-  // execute the kernel:
-
+  // Execute the kernel.
   MonteCarlo<<<grid, threads>>>(dXcs, dYcs, dRs, dHits);
 
-  // record the stop event:
-
+  // Record the stop event.
   status = cudaEventRecord(stop, NULL);
   checkCudaErrors(status);
 
-  // wait for the stop event to complete:
-
+  // Wait for the stop event to complete.
   status = cudaEventSynchronize(stop);
   checkCudaErrors(status);
 
@@ -204,23 +200,20 @@ int main(int argc, char *argv[]) {
   status = cudaEventElapsedTime(&msecTotal, start, stop);
   checkCudaErrors(status);
 
-  // compute and print the performance
-
+  // Compute and print the performance.
   double secondsTotal = 0.001 * (double)msecTotal;
   double trialsPerSecond = (float)NUMTRIALS / secondsTotal;
   double megaTrialsPerSecond = trialsPerSecond / 1000000.;
   fprintf(stderr, "Number of Trials = %10d, MegaTrials/Second = %10.4lf\n",
           NUMTRIALS, megaTrialsPerSecond);
 
-  // copy result from the device to the host:
-
+  // Copy result from the device to the host.
   status =
       cudaMemcpy(hHits, dHits, NUMTRIALS * sizeof(int), cudaMemcpyDeviceToHost);
   checkCudaErrors(status);
   cudaDeviceSynchronize();
 
-  // compute the probability:
-
+  // Compute the probability.
   int numHits = 0;
   for (int i = 0; i < NUMTRIALS; i++) {
     numHits += hHits[i];
@@ -229,7 +222,7 @@ int main(int argc, char *argv[]) {
   float probability = 100.f * (float)numHits / (float)NUMTRIALS;
   fprintf(stderr, "\nProbability = %6.3f %%\n", probability);
 
-  // clean up memory:
+  // Clean up memory.
   delete[] hXcs;
   delete[] hYcs;
   delete[] hRs;
