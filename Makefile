@@ -1,4 +1,4 @@
-objects = cuda_carlo.o #particle.o v3.o
+objects = cuda_carlo.o cuda_rig.o
 
 NVCC = /usr/local/apps/cuda/cuda-10.1/bin/nvcc 
 
