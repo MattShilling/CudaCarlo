@@ -16,12 +16,11 @@ K256=262144
 K512=524288
 K1M=1048576
 
-make
-
 for BLOCKSIZE in 16 32 64 128
 do
     for NUMTRIAL in ${K16} ${K32} ${K64} ${K128} ${K256} ${K512} ${K1M}
     do 
+        make
         ./cuda_carlo ${BLOCKSIZE} ${NUMTRIAL}
     done
 done
