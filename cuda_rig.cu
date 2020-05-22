@@ -12,52 +12,46 @@
 #include "helper_cuda.h"
 #include "helper_functions.h"
 
-void CudaRig::Init(int num_threads) {
-  if (mp_good_) {
-    // Set the number of threads we want to use.
-    // omp_set_num_threads(num_threads);
-    // fprintf(stderr, "Using %d threads\n", num_threads);
-    // We aren't using OMP multithreading for this..yet.
-
-    // Initialize test memory.
-    test_init_(mem_);
-
-    // Clear our records.
-    perf_.clear();
-  } else {
-    printf("Init error: OpenMP not supported!\n");
-  }
+void CudaRig::Init() {
+  // Initialize test memory.
+  test_init_(mem_);
 }
 
-void CudaRig::Run(double ops) {
-  // Get the starting time for our test.
-  double start = omp_get_wtime();
-  // Run. That. Test!
-  test_run_(mem_);
-  // Get the ending time for our test.
-  double stop = omp_get_wtime();
-  // Calculate the multiplications per second we accomplished.
-  double time_per_op = ops / (stop - start);
-  // Convert into megamults.
-  double perf = time_per_op / 1000000.00;
-  // Add results to our records.
-  perf_.push_back(perf);
-}
-
-double CudaRig::MaxPerf() {
-  return *std::max_element(perf_.begin(), perf_.end());
-}
-
-double CudaRig::MinPerf() {
-  return *std::min_element(perf_.begin(), perf_.end());
-}
-
-static int CudaRig::AddCopy(void **device, void *host, size_t sz) {
+int CudaRig::InitAndCopy(void **device, void *host, size_t sz) {
   cudaError_t status;
   status = cudaMalloc(device, sz);
   checkCudaErrors(status);
   // Copy host memory to the GPU.
   status =
-      cudaMemcpy(device, host, sz, cudaMemcpyHostToDevice);
+      cudaMemcpy(*device, host, sz, cudaMemcpyHostToDevice);
+  checkCudaErrors(status);
+
+  return status;
+}
+
+void CudaRig::StartCudaTimer(CudaTimer *t) {
+  cudaError_t status;
+  // Create and start timer.
+  cudaDeviceSynchronize();
+
+  // Allocate CUDA events that we'll use for timing.
+  status = cudaEventCreate(&(t->start));
+  checkCudaErrors(status);
+  status = cudaEventCreate(&(t->stop));
+  checkCudaErrors(status);
+
+  // Record the start event.
+  status = cudaEventRecord(t->start, NULL);
+  checkCudaErrors(status);
+}
+
+void CudaRig::StopCudaTimer(CudaTimer *t){
+  cudaError_t status;
+  // Record the stop event.
+  status = cudaEventRecord(t->stop, NULL);
+  checkCudaErrors(status);
+
+  // Wait for the stop event to complete.
+  status = cudaEventSynchronize(t->stop);
   checkCudaErrors(status);
 }

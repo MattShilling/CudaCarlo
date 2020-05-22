@@ -6,25 +6,29 @@
 #include <memory>
 #include <vector>
 
+// Helper functions and utilities to work with CUDA
+#include "helper_cuda.h"
+#include "helper_functions.h"
+
+struct CudaTimer {
+  cudaEvent_t start;
+  cudaEvent_t stop;
+};
+
 class CudaRig {
 public:
-  CudaRig(std::shared_ptr<void> mem,
-          std::function<void(std::shared_ptr<void> mem)> run,
-          std::function<void(std::shared_ptr<void> mem)> init)
-      : mem_(mem), test_init_(init), test_run_(run)){};
-  void Init(int num_threads);
-  void Run(double sz);
+  CudaRig(void *mem,
+          std::function<void(void* mem)> init)
+      : mem_(mem), test_init_(init) {};
+  void Init();
 
-  double MaxPerf();
-  double MinPerf();
-
-  static int AddCopy();
+  static int InitAndCopy(void **device, void *host, size_t sz);
+  static void StartCudaTimer(CudaTimer *t);
+  static void StopCudaTimer(CudaTimer *t);
 
 private:
-  std::shared_ptr<void> mem_;
-  std::function<void(std::shared_ptr<void> mem)> test_init_;
-  std::function<void(std::shared_ptr<void> mem)> test_run_;
-  std::vector<double> perf_;
+  void* mem_;
+  std::function<void(void* mem)> test_init_;
 };
 
 #endif // CUDA_RIG_H_
