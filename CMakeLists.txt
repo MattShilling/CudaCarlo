@@ -10,7 +10,7 @@ endif()
 set(CMAKE_INCLUDE_CURRENT_DIR YES)
 
 # Set the project name.
-project(CudaCarlo CXX CUDA)
+project(CudaCarlo)
 
 add_compile_options(-std=c++11)
 
