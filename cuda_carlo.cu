@@ -137,10 +137,10 @@ int main(int argc, char *argv[]) {
   // Allocate GPU memory.
   float *dXcs, *dYcs, *dRs;
   int *dHits;
-  dim3 dimsXcs(NUMTRIALS, 1, 1);
-  dim3 dimsYcs(NUMTRIALS, 1, 1);
-  dim3 dimsRs(NUMTRIALS, 1, 1);
-  dim3 dimsHits(NUMTRIALS, 1, 1);
+  // dim3 dimsXcs(NUMTRIALS, 1, 1);
+  // dim3 dimsYcs(NUMTRIALS, 1, 1);
+  // dim3 dimsRs(NUMTRIALS, 1, 1);
+  // dim3 dimsHits(NUMTRIALS, 1, 1);
 
   cudaError_t status;
   status = cudaMalloc((void **)(&dXcs), NUMTRIALS * sizeof(float));
