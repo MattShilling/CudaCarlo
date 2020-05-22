@@ -1,23 +1,20 @@
  
 cmake_minimum_required(VERSION 2.8)
 
-# Info on making his CMakeLists.txt found on:
-# https://devblogs.nvidia.com/building-cuda-applications-cmake/
+set(CMAKE_INSTALL_RPATH ${LIBNVVM_HOME})
+
+if(CMAKE_SIZEOF_VOID_P STREQUAL "8")
+  add_definitions(-DBUILD_64_BIT)
+endif()
+
+set(CMAKE_INCLUDE_CURRENT_DIR YES)
 
 # Set the project name.
 project(CudaCarlo CXX CUDA)
 
-find_package(CUDA REQUIRED)
-
 add_compile_options(-std=c++11)
-
-#target_compile_options(CudaCarlo PUBLIC cxx_std_11)
 
 # add the executable
 add_executable(CudaCarlo cuda_carlo.cu)
 
-#set_target_properties( CudaCarlo PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-
-# target_link_libraries(VectorizeSSE PRIVATE "${OpenMP_CXX_FLAGS}")
-# target_compile_options(VectorizeSSE PRIVATE "${OpenMP_CXX_FLAGS}")
+target_link_libraries(simple ${NVVM_LIB} ${CUDA_LIB})
