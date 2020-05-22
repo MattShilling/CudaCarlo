@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <random>
+#include <chrono>
 
 // CUDA runtime
 #include <cuda_runtime.h>
