@@ -179,11 +179,11 @@ int main(int argc, char *argv[]) {
   mem->initialized = false;
 
   // Taking in some command line arguments to control the program.
-  float block_size = BLOCKSIZE;
+  int block_size = BLOCKSIZE;
   int num_trials = NUMTRIALS;
 
   if(argc >= 2) {
-    block_size = std::stof(std::string(argv[1]));
+    block_size = std::stoi(std::string(argv[1]));
   }
 
   if(argc >= 3) {
@@ -191,6 +191,9 @@ int main(int argc, char *argv[]) {
   }
 
   mem->num_trials = num_trials;
+
+  fprintf(stderr, "Block size = %d\n", block_size);
+  fprintf(stderr, "Num trials size = %d\n", num_trials);
 
   CudaRig cuda_carlo(mem, test_init);
   cuda_carlo.Init();
@@ -220,7 +223,7 @@ int main(int argc, char *argv[]) {
   double secondsTotal = 0.001 * (double)msecTotal;
   double trialsPerSecond = (float)NUMTRIALS / secondsTotal;
   double megaTrialsPerSecond = trialsPerSecond / 1000000.;
-  fprintf(stderr, "Number of Trials = %10d, MegaTrials/Second = %10.4lf\n",
+  fprintf(stderr, "MegaTrials/Second = %10.4lf\n",
           num_trials, megaTrialsPerSecond);
 
   // Copy result from the device to the host.
@@ -236,7 +239,7 @@ int main(int argc, char *argv[]) {
   }
 
   float probability = 100.f * (float)numHits / (float)num_trials;
-  fprintf(stderr, "\nProbability = %6.3f %%\n", probability);
+  fprintf(stderr, "Probability = %6.3f %%\n", probability);
 
   return 0;
 }

@@ -8,8 +8,20 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=shillinm@oregonstate.edu
 
-for t in 1 2 4 8 16 32
-do
+K16=16384
+K32=32768
+K64=65536
+K128=131072
+K256=262144
+K512=524288
+K1M=1048576
+
 make
-./cuda_carlo
+
+for BLOCKSIZE in 16 32 64 128
+do
+    for NUMTRIAL in ${K16} ${K32} ${K64} ${K128} ${K256} ${K512} ${K1M}
+    do 
+        ./cuda_carlo ${BLOCKSIZE} ${NUMTRIAL}
+    done
 done
