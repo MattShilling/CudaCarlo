@@ -15,6 +15,7 @@ project(CudaCarlo CXX)
 add_compile_options(-std=c++11)
 
 # add the executable
-add_executable(CudaCarlo cuda_carlo.cu)
+add_llvm_executable(CudaCarlo cuda_carlo.cu)
 
 target_link_libraries(CudaCarlo ${NVVM_LIB} ${CUDA_LIB})
+set_target_properties(CudaCarlo PROPERTIES LINK_FLAGS "-Wl,-rpath,${LIBNVVM_RPATH}")
