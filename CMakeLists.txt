@@ -17,4 +17,4 @@ add_compile_options(-std=c++11)
 # add the executable
 add_executable(CudaCarlo cuda_carlo.cu)
 
-target_link_libraries(simple ${NVVM_LIB} ${CUDA_LIB})
+target_link_libraries(CudaCarlo ${NVVM_LIB} ${CUDA_LIB})
