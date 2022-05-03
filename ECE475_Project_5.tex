@@ -1,0 +1,118 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{preamble}
+\usepackage{chngcntr}
+\usepackage{soul}
+\usepackage{graphicx}
+
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+
+\counterwithin*{equation}{section}
+\counterwithin*{equation}{subsection}
+
+\newcommand{\mathcolorbox}[2]{\colorbox{#1}{$\displaystyle #2$}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Edit These for yourself
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand\course{CS 475}
+\newcommand\hwnumber{5}
+\newcommand\userID{Matt Shilling}
+
+\begin{document}
+
+\section{Machine Info}
+
+I submitted the code I wrote to the DGX server as a batch job. The DGX server ran the program with: \\
+
+\begin{lstlisting}
+GPU Device 0: "Tesla V100-DGXS-32GB" with compute capability 7.0
+\end{lstlisting}
+
+\section{Patterns Seen and Discussion}
+
+As a general trend, the performance decreased as the amount of trials ran was doubled. There are some outliers, though. Figure \ref{fig:g_vs_t} shows the GigaTrials/sec (performance) vs. Number of Trials ran. There are certain spikes, such as 64K trials ran with a block size of 128 and 32. There is another spike on 256K trials with a block size of 32, as well. \\
+
+\noindent \textbf{Why do the patterns seem this way?} \\
+\noindent One thing that I'm still grappling with is that the Tesla V100 has 84 streaming multiprocessors ("SM"'s) each with four (4) blocks capable of running 32 threads each, so why don't we see performance increasing as we utilize more and more of the GPU? I'm not exactly sure, and I'm reading up on the architecture to eventually find out. I'm assuming that we start to reach the maximum number of floating points operations the GPU can handle per block. There is less 32-bit floating point cores than there are threads available (5376 FP32 Cores vs 10752 total available threads). The best explanation that I can come up with at this point is that there is a much larger overhead to what we are executing on the GPU for this program.\\
+
+\noindent \textbf{Why does a BLOCKSIZE of 16 perform worse?} \\
+\noindent One other trend that can be seen is that a block size of 16 (almost) always performs worse than every other block size. You can see this in Figure \ref{fig:g_vs_b}. This is because there are 32 threads in a "warp" on a GPU. If you run the Monte Carlo simulation with a "block size" (which is really number of threads per block) of 16, it won't even fill up a single "warp". However, if you have 64 threads, for example, you have 2 warps worth of threads, allowing you can fill up each block to the max. \\
+
+\noindent \textbf{How does this compare to Project #1 Results?} \\
+\noindent An interesting difference between "Project #5"'s performance vs. "Project #1"'s is that performance is \textit{decreased} as the number of trials \textit{increased}. In "Project #1", the performance is \textit{increased} as the number of trials \textit{increased}. The hypothesis mentioned earlier (the large overhead) might be the reason why we are seeing this behavior. CPU's are probably designed to devour the logic in "MonteCarlo()" while running on a GPU the overhead starts to eat into performance as the number of trials increased. Don't get me wrong, the actual performance in terms of operations per second is \textbf{MUCH} larger (factor of 100-1000).
+
+
+%-------------------------------------------------------------------
+\section{Results: Graphs}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{g_vs_t.pdf}
+    \caption{Performance vs. NUM\_TRIALS with multiple curves of BLOCKSIZE.}
+    \label{fig:g_vs_t}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{g_vs_b.pdf}
+    \caption{Performance vs. BLOCKSIZE with multiple curves of NUM\_TRIALS.}
+    \label{fig:g_vs_b}
+\end{figure}
+
+\section{Results: Tables}
+
+Table \ref{results} shows the results of the CUDA Monte Carlo simulation.
+
+% Please add the following required packages to your document preamble:
+% \usepackage{graphicx}
+\begin{table}[]
+\centering
+\resizebox{14cm}{!}{%
+\begin{tabular}{|l|l|l|}
+\hline
+\multicolumn{1}{|c|}{\textbf{Block Size}} & \multicolumn{1}{c|}{\textbf{Number of Trials}} & \multicolumn{1}{c|}{\textbf{GigaTrials/sec}} \\ \hline
+16  & 16384   & 34.1333 \\ \hline
+16  & 32768   & 32.1886 \\ \hline
+16  & 65536   & 29.0239 \\ \hline
+16  & 131072  & 23.7621 \\ \hline
+16  & 262144  & 18.1540 \\ \hline
+16  & 524288  & 11.6075 \\ \hline
+16  & 1048576 & 6.5839  \\ \hline
+32  & 16384   & 27.6757 \\ \hline
+32  & 32768   & 31.3569 \\ \hline
+32  & 65536   & 31.6293 \\ \hline
+32  & 131072  & 25.3819 \\ \hline
+32  & 262144  & 25.4015 \\ \hline
+32  & 524288  & 16.2218 \\ \hline
+32  & 1048576 & 11.3817 \\ \hline
+64  & 16384   & 36.5714 \\ \hline
+64  & 32768   & 35.3866 \\ \hline
+64  & 65536   & 32.8337 \\ \hline
+64  & 131072  & 29.7891 \\ \hline
+64  & 262144  & 22.7872 \\ \hline
+64  & 524288  & 17.4856 \\ \hline
+64  & 1048576 & 11.8940 \\ \hline
+128 & 16384   & 34.1333 \\ \hline
+128 & 32768   & 33.2670 \\ \hline
+128 & 65536   & 36.6123 \\ \hline
+128 & 131072  & 24.9186 \\ \hline
+128 & 262144  & 22.5210 \\ \hline
+128 & 524288  & 16.5914 \\ \hline
+128 & 1048576 & 11.3857 \\ \hline
+\end{tabular}%
+}
+\caption{Results of the Monte Carlo Simulation.}
+\label{results}
+\end{table}
+
+\section{What Does This Mean for Proper Use of GPU Parallel Computing?}
+
+Essentially, you should try to make sure your code running on the GPU is as serial as possible. There should be very little logic and a lot of mathematical operations. The logic in the Monte Carlo simulation might actually mess up the performance of the GPU because different threads are starting and ending at the same time. For example, you end a thread because it failed the first if statement but another went all the way through. Actually... now that I say that, I should try removing if statements from the kernel! \\
+
+\noindent \textbf{5 minutes later...} \\
+
+\noindent So I tried removing the if statements in the kernel, and it actually ran slower! Well, there goes that hypothesis. 
+%-------------------------------------------------------------------
+\end{document}
+
