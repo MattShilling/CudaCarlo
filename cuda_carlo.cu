@@ -173,9 +173,9 @@ void test_init(void *mem) {
 }
 
 // Main program.
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
-  int dev = findCudaDevice(argc, (const char **)argv);
+  int dev = findCudaDevice(argc, static_cast<const char **>(argv));
 
   TestMem *mem = new TestMem();
   mem->initialized = false;
