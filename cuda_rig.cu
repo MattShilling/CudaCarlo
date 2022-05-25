@@ -10,7 +10,6 @@
 
 // Helper functions and utilities to work with CUDA
 #include "helper_cuda.h"
-#include "helper_functions.h"
 
 void CudaRig::Init() {
   // Initialize test memory.
@@ -22,8 +21,7 @@ int CudaRig::InitAndCopy(void **device, void *host, size_t sz) {
   status = cudaMalloc(device, sz);
   checkCudaErrors(status);
   // Copy host memory to the GPU.
-  status =
-      cudaMemcpy(*device, host, sz, cudaMemcpyHostToDevice);
+  status = cudaMemcpy(*device, host, sz, cudaMemcpyHostToDevice);
   checkCudaErrors(status);
 
   return status;
@@ -45,7 +43,7 @@ void CudaRig::StartCudaTimer(CudaTimer *t) {
   checkCudaErrors(status);
 }
 
-void CudaRig::StopCudaTimer(CudaTimer *t){
+void CudaRig::StopCudaTimer(CudaTimer *t) {
   cudaError_t status;
   // Record the stop event.
   status = cudaEventRecord(t->stop, NULL);

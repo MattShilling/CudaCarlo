@@ -1,18 +1,17 @@
 // System includes
 #include <assert.h>
+#include <chrono>
 #include <malloc.h>
 #include <math.h>
+#include <random>
 #include <stdio.h>
 #include <stdlib.h>
-#include <random>
-#include <chrono>
 
 // CUDA runtime
 #include <cuda_runtime.h>
 
 // Helper functions and utilities to work with CUDA
 #include "helper_cuda.h"
-#include "helper_functions.h"
 
 #include "cuda_rig.h"
 
@@ -28,13 +27,12 @@
 #define NUMBLOCKS (NUMTRIALS / BLOCKSIZE)
 
 // ranges for the random numbers:
-const float XCMIN = 0.0;
+const float XCMIN = 0.5;
 const float XCMAX = 2.0;
-const float YCMIN = 0.0;
+const float YCMIN = 0.5;
 const float YCMAX = 2.0;
 const float RMIN = 0.5;
 const float RMAX = 2.0;
-
 
 struct Memory {
   // Allocate host memory.
@@ -87,14 +85,14 @@ __global__ void MonteCarlo(float *xcs, float *ycs, float *rs, int *hits) {
   float yc = ycs[gid];
   float r = rs[gid];
 
-  float k_tn = tanf((float)((M_PI / 180.) * 30.));
+  float k_tn = tanf(static_cast<float>((M_PI / 180.0) * 30.0));
   hits[gid] = 0;
 
   // solve for the intersection using the quadratic formula:
-  float a = 1. + k_tn * k_tn;
-  float b = -2. * (xc + yc * k_tn);
+  float a = 1.0 + k_tn * k_tn;
+  float b = -2.0 * (xc + yc * k_tn);
   float c = xc * xc + yc * yc - r * r;
-  float d = b * b - 4. * a * c;
+  float d = b * b - 4.0 * a * c;
 
   if (d >= 0.0) {
     // hits the circle:
@@ -117,8 +115,8 @@ __global__ void MonteCarlo(float *xcs, float *ycs, float *rs, int *hits) {
       ny /= nxy; // unit vector
 
       // get the unitized incoming vector:
-      float inx = xcir - 0.;
-      float iny = ycir - 0.;
+      float inx = xcir - 0.0;
+      float iny = ycir - 0.0;
       float in = sqrt(inx * inx + iny * iny);
       inx /= in; // unit vector
       iny /= in; // unit vector
@@ -126,7 +124,7 @@ __global__ void MonteCarlo(float *xcs, float *ycs, float *rs, int *hits) {
       // get the outgoing (bounced) vector:
       float dot = inx * nx + iny * ny;
       float outy =
-          iny - 2. * ny * dot; // angle of reflection = angle of incidence`
+          iny - 2.0 * ny * dot; // angle of reflection = angle of incidence`
 
       // find out if it hits the infinite plate:
       float t = (0.0 - ycir) / outy;
@@ -137,7 +135,7 @@ __global__ void MonteCarlo(float *xcs, float *ycs, float *rs, int *hits) {
   }
 }
 
-void test_init(void* mem) {
+void test_init(void *mem) {
   TestMem *data = static_cast<TestMem *>(mem);
 
   // Allocate host memory.
@@ -164,10 +162,14 @@ void test_init(void* mem) {
     data->host->hits[n] = 0;
   }
 
-  CudaRig::InitAndCopy(reinterpret_cast<void **>(&data->device->xcs), data->host->xcs, data->num_trials * sizeof(float));
-  CudaRig::InitAndCopy(reinterpret_cast<void **>(&data->device->ycs), data->host->ycs, data->num_trials * sizeof(float));
-  CudaRig::InitAndCopy(reinterpret_cast<void **>(&data->device->rs), data->host->rs, data->num_trials * sizeof(float));
-  CudaRig::InitAndCopy(reinterpret_cast<void **>(&data->device->hits), data->host->hits, data->num_trials * sizeof(int));
+  CudaRig::InitAndCopy(reinterpret_cast<void **>(&data->device->xcs),
+                       data->host->xcs, data->num_trials * sizeof(float));
+  CudaRig::InitAndCopy(reinterpret_cast<void **>(&data->device->ycs),
+                       data->host->ycs, data->num_trials * sizeof(float));
+  CudaRig::InitAndCopy(reinterpret_cast<void **>(&data->device->rs),
+                       data->host->rs, data->num_trials * sizeof(float));
+  CudaRig::InitAndCopy(reinterpret_cast<void **>(&data->device->hits),
+                       data->host->hits, data->num_trials * sizeof(int));
 }
 
 // Main program.
@@ -175,18 +177,18 @@ int main(int argc, char *argv[]) {
 
   int dev = findCudaDevice(argc, (const char **)argv);
 
-  TestMem* mem = new TestMem();
+  TestMem *mem = new TestMem();
   mem->initialized = false;
 
   // Taking in some command line arguments to control the program.
   int block_size = BLOCKSIZE;
   int num_trials = NUMTRIALS;
 
-  if(argc >= 2) {
+  if (argc >= 2) {
     block_size = std::stoi(std::string(argv[1]));
   }
 
-  if(argc >= 3) {
+  if (argc >= 3) {
     num_trials = std::stoi(std::string(argv[2]));
   }
 
@@ -209,26 +211,27 @@ int main(int argc, char *argv[]) {
   CudaRig::StartCudaTimer(&t);
 
   // Execute the kernel.
-  MonteCarlo<<<grid, threads>>>(mem->device->xcs, mem->device->ycs, mem->device->rs, mem->device->hits);
+  MonteCarlo<<<grid, threads>>>(mem->device->xcs, mem->device->ycs,
+                                mem->device->rs, mem->device->hits);
 
   CudaRig::StopCudaTimer(&t);
 
   cudaError_t status;
 
-  float msecTotal = 0.0f;
+  float msecTotal = 0.0;
   status = cudaEventElapsedTime(&msecTotal, t.start, t.stop);
   checkCudaErrors(status);
 
   // Compute and print the performance.
-  double secondsTotal = 0.001 * (double)msecTotal;
-  double trialsPerSecond = (float)NUMTRIALS / secondsTotal;
-  double megaTrialsPerSecond = trialsPerSecond / 1000000.;
-  fprintf(stderr, "MegaTrials/Second = %10.4lf\n",
-          num_trials, megaTrialsPerSecond);
+  double secondsTotal = 1e-3 * static_cast<double>(msecTotal);
+  double trialsPerSecond = static_cast<double>(NUMTRIALS) / secondsTotal;
+  double megaTrialsPerSecond = trialsPerSecond / 1e6;
+  fprintf(stderr, "MegaTrials/Second = %10.4lf\n", megaTrialsPerSecond);
 
   // Copy result from the device to the host.
-  status =
-      cudaMemcpy(mem->host->hits, mem->device->hits, num_trials * sizeof(int), cudaMemcpyDeviceToHost);
+  static_assert(sizeof(*mem->host->hits) == sizeof(*mem->device->hits));
+  status = cudaMemcpy(mem->host->hits, mem->device->hits,
+                      num_trials * sizeof(int), cudaMemcpyDeviceToHost);
   checkCudaErrors(status);
   cudaDeviceSynchronize();
 
@@ -238,8 +241,12 @@ int main(int argc, char *argv[]) {
     numHits += mem->host->hits[i];
   }
 
-  float probability = 100.f * (float)numHits / (float)num_trials;
-  fprintf(stderr, "Probability = %6.3f %%\n", probability);
+  printf("hits = %d\n", numHits);
+  printf("num_trials = %d\n", num_trials);
+
+  double probability =
+      100.0 * static_cast<double>(numHits) / static_cast<double>(num_trials);
+  fprintf(stderr, "Probability = %6.3f%%\n", probability);
 
   return 0;
 }

@@ -8,7 +8,6 @@
 
 // Helper functions and utilities to work with CUDA
 #include "helper_cuda.h"
-#include "helper_functions.h"
 
 struct CudaTimer {
   cudaEvent_t start;
